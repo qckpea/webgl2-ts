@@ -18,40 +18,49 @@ const main = () => {
 
   gl.useProgram(program!);
 
-  // getting the location of the uniform variables in the shader
-  // only need to get the locations once they are the same for every draw call
-  const positionLoc = gl.getUniformLocation(program, 'uPosition');
-  const pointSizeLoc = gl.getUniformLocation(program, 'uPointSize');
-  const colorIndexLoc = gl.getUniformLocation(program, 'uColorIndex');
-  const colorsLoc = gl.getUniformLocation(program, 'uColors');
+  // const locPosition = gl.getAttribLocation(program, 'aPosition') 
+  // might be another way to get the location of the attributes
+  // in that case we don't specify the layout(location = x) in the vertex shader
   
-  // setting with the 'v' variant of uniform functions
-  // we can pass an iterable object (for example array) to the uniform varible
-  gl.uniform4fv(colorsLoc, [
-    1.0, 0.0, 0.0, 1.0, // red
-    0.0, 1.0, 0.0, 1.0, // green
-    0.0, 0.0, 1.0, 1.0  // blue
+  // but for now
+  // attribute locations specified here are the same as in the vertex shader
+  const locPosition = 0;
+  const locPointSize = 1;
+  const locColor = 2;
+  
+  // also there is a way to set the attribute locations manually with
+  // gl.bindAttribLocation(program, locPosition, 'aPosition')
+  // BUT in that case binding needs to happen before the linking of the webGl program
+  
+  // enable the attributes
+  gl.enableVertexAttribArray(locPosition);
+  gl.enableVertexAttribArray(locPointSize);
+  gl.enableVertexAttribArray(locColor);
+
+  // setting up the buffer data
+  const bufferData = new Float32Array([
+    0.0, 1.0,      100,   1, 0, 0,
+    -1.0, -1.0,     50,   0, 1, 0,
+    1.0, -1.0,       75,  0, 0, 1
   ]);
+  const FLOAT_SIZE_IN_BYTE = 4;
+  const NUM_ELEMENTS_PER_VERTEX = 6;
+  // stride value must be given in bytes
+  // we use Float32Array so a single float is 4 bytes
+  const STRIDE = FLOAT_SIZE_IN_BYTE * NUM_ELEMENTS_PER_VERTEX;
 
-  // setting the uniform values before draw call
-  // the values are same for all vertices and fragments
-  // 'uniform'
-  gl.uniform2f(positionLoc, 0.0, 0.0);
-  gl.uniform1f(pointSizeLoc, 50.0);
-  gl.uniform1i(colorIndexLoc, 0);
-  gl.drawArrays(gl.POINTS, 0, 1);
+  const buffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+  gl.bufferData(gl.ARRAY_BUFFER, bufferData, gl.STATIC_DRAW);
 
-  // setting again
-  gl.uniform2f(positionLoc, 0.5, 0.5);
-  gl.uniform1f(pointSizeLoc, 20.0);
-  gl.uniform1i(colorIndexLoc, 1);
-  gl.drawArrays(gl.POINTS, 0, 1);
+  // vertexAttribPointer specifies which part of the bufferData is used for attribute
+  gl.vertexAttribPointer(locPosition, 2, gl.FLOAT, false, STRIDE, 0);
+  gl.vertexAttribPointer(locPointSize, 1, gl.FLOAT, false, STRIDE, 2 * FLOAT_SIZE_IN_BYTE);
+  gl.vertexAttribPointer(locColor, 3, gl.FLOAT, false, STRIDE, 3 * FLOAT_SIZE_IN_BYTE);
 
-  // ... and again
-  gl.uniform2f(positionLoc, -0.5, 0.25);
-  gl.uniform1f(pointSizeLoc, 10.0);
-  gl.uniform1i(colorIndexLoc, 2);
-  gl.drawArrays(gl.POINTS, 0, 1);
+  // we can experiment with the draw mode here
+  // gl.drawArrays(gl.POINTS, 0, 3);
+  gl.drawArrays(gl.TRIANGLES, 0, 3);
 };
 
 main();

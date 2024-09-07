@@ -1,9 +1,8 @@
 #version 300 es
 
-uniform int uColorIndex;
-uniform mediump vec4 uColors[3];
+in mediump vec3 vColor;
 out mediump vec4 fragColor;
 
 void main() {
-    fragColor = uColors[uColorIndex];
+    fragColor = vec4(vColor, 1.0);
 }
