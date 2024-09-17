@@ -18,60 +18,52 @@ const main = () => {
 
   gl.useProgram(program!);
 
-  // const locPosition = gl.getAttribLocation(program, 'aPosition') 
-  // might be another way to get the location of the attributes
-  // in that case we don't specify the layout(location = x) in the vertex shader
-  
-  // but for now
-  // attribute locations specified here are the same as in the vertex shader
   const locPosition = 0;
-  const locPointSize = 1;
-  const locColor = 2;
+  const locColor = 1;
   
-  // also there is a way to set the attribute locations manually with
-  // gl.bindAttribLocation(program, locPosition, 'aPosition')
-  // BUT in that case binding needs to happen before the linking of the webGl program
-  
-  // enable the attributes
   gl.enableVertexAttribArray(locPosition);
-  gl.enableVertexAttribArray(locPointSize);
-  // comment out to get a fallback color
   gl.enableVertexAttribArray(locColor);
-
-  // vertexAttrib calls could be good for a couple of reasons
-  // it is useful for debugging, try to comment out
-  // gl.enableVertexAttribArray(locColor);
-  // it is very helpful to test attributes in isolation
-  // by simply enable/disable them and setting a default value
-  
-  // note: locColor value is overwritten further down by vertexAttribPointer
-  // if the vertex attribute array is enabled
+  // fallback color for debug
   gl.vertexAttrib4f(locColor, 1.0, 0.0, 0.0, 1.0);
 
-  // setting up the buffer data
-  const bufferData = new Float32Array([
-    0.0, 1.0,      100,   1, 0, 0,
-    -1.0, -1.0,     50,   0, 1, 0,
-    1.0, -1.0,       75,  0, 0, 1
+  // Hexagon vertices (center at origin)
+  const vertices = new Float32Array([
+  // X      Y        R, G, B, A
+     0.0,   0.0,     1, 1, 1, 1,  // Center (0)
+     0.5,   0.866,   1, 0, 0, 1,  // Vertex 1
+     1.0,   0.0,     0, 1, 0, 1,  // Vertex 2
+     0.5,  -0.866,   0, 0, 1, 1,  // Vertex 3
+    -0.5,  -0.866,   1, 1, 0, 1,  // Vertex 4
+    -1.0,   0.0,     0, 1, 1, 1,  // Vertex 5
+    -0.5,   0.866,   1, 0, 1, 1   // Vertex 6
   ]);
-  const FLOAT_SIZE_IN_BYTE = 4;
-  const NUM_ELEMENTS_PER_VERTEX = 6;
-  // stride value must be given in bytes
-  // we use Float32Array so a single float is 4 bytes
-  const STRIDE = FLOAT_SIZE_IN_BYTE * NUM_ELEMENTS_PER_VERTEX;
 
-  const buffer = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-  gl.bufferData(gl.ARRAY_BUFFER, bufferData, gl.STATIC_DRAW);
+  // Indices for hexagon (center vertex reused)
+  // note: we are not reusing the color attributes here
+  const indices = new Uint16Array([
+      0, 1, 2,   // Triangle 1
+      0, 2, 3,   // Triangle 2
+      0, 3, 4,   // Triangle 3
+      0, 4, 5,   // Triangle 4
+      0, 5, 6,   // Triangle 5
+      0, 6, 1    // Triangle 6
+  ]);
 
-  // vertexAttribPointer specifies which part of the bufferData is used for attribute
-  gl.vertexAttribPointer(locPosition, 2, gl.FLOAT, false, STRIDE, 0);
-  gl.vertexAttribPointer(locPointSize, 1, gl.FLOAT, false, STRIDE, 2 * FLOAT_SIZE_IN_BYTE);
-  gl.vertexAttribPointer(locColor, 3, gl.FLOAT, false, STRIDE, 3 * FLOAT_SIZE_IN_BYTE);
+  // Create buffers
+  const vertexBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
 
-  // we can experiment with the draw mode here
-  // gl.drawArrays(gl.POINTS, 0, 3);
-  gl.drawArrays(gl.TRIANGLES, 0, 3);
+  const indexBuffer = gl.createBuffer();
+  // note: the target is ELEMENT_ARRAY_BUFFER for indices
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, gl.STATIC_DRAW);
+
+  // note: you can specify bytes for floats as Float32Array.BYTES_PER_ELEMENT
+  gl.vertexAttribPointer(locPosition, 2, gl.FLOAT, false, 6 * Float32Array.BYTES_PER_ELEMENT, 0);
+  gl.vertexAttribPointer(locColor, 4, gl.FLOAT, false, 6 * Float32Array.BYTES_PER_ELEMENT, 2 * Float32Array.BYTES_PER_ELEMENT);
+
+  gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_SHORT, 0);
 };
 
 main();
