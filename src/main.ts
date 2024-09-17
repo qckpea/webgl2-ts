@@ -35,7 +35,18 @@ const main = () => {
   // enable the attributes
   gl.enableVertexAttribArray(locPosition);
   gl.enableVertexAttribArray(locPointSize);
+  // comment out to get a fallback color
   gl.enableVertexAttribArray(locColor);
+
+  // vertexAttrib calls could be good for a couple of reasons
+  // it is useful for debugging, try to comment out
+  // gl.enableVertexAttribArray(locColor);
+  // it is very helpful to test attributes in isolation
+  // by simply enable/disable them and setting a default value
+  
+  // note: locColor value is overwritten further down by vertexAttribPointer
+  // if the vertex attribute array is enabled
+  gl.vertexAttrib4f(locColor, 1.0, 0.0, 0.0, 1.0);
 
   // setting up the buffer data
   const bufferData = new Float32Array([
