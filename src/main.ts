@@ -2,7 +2,13 @@ import { createWebGlProgram } from "./program";
 import fragmentSource from "./shaders/fragmentShader.frag";
 import vertexSource from "./shaders/vertexShader.vert";
 
-const main = () => {
+const loadImage = (imageUrl: string): Promise<HTMLImageElement> => new Promise(resolve => {
+  const image = new Image();
+  image.addEventListener('load', () => resolve(image));
+  image.src = imageUrl;
+})
+
+const main = async () => {
   const canvas = document.querySelector("#canvas") as HTMLCanvasElement;
   const gl = canvas.getContext("webgl2") as WebGL2RenderingContext;
   if (!gl) {
@@ -15,31 +21,25 @@ const main = () => {
     console.error("Could not initialize WebGlProgram!");
     return;
   }
-
   gl.useProgram(program!);
   const locPosition = 0;
   const texPosition = 1;
   gl.enableVertexAttribArray(locPosition);
   gl.enableVertexAttribArray(texPosition);
 
-  // setting up the buffer data
   const bufferData = new Float32Array([0.0, 1.0, -1.0, -1.0, 1.0, -1.0]);
-  // texture coordinates
   const texCoordBufferData = new Float32Array([0.5, 1, 0, 0, 1, 0]);
-  // Pixels for a 3x3 texture, where each pixel has 3 components (R, G, B)
   const pixels = new Uint8Array([
-    255, 0, 0,   // red
-    0, 255, 0,   // green
-    0, 0, 255,   // blue
-    128, 128, 0, // olive
-    255, 255, 0, // yellow
-    255, 128, 0, // orange
-    0, 255, 255, // cyan    <= won't show because the triangle shape does not cover it
-    255, 0, 255, // magenta
-    0, 0, 0      // black   <= won't show because the triangle shape does not cover it
+    255, 0, 0,
+    0, 255, 0,
+    0, 0, 255,
+    128, 128, 0,
+    255, 255, 0,
+    255, 128, 0,
+    0, 255, 255,
+    255, 0, 255,
+    0, 0, 0 
   ]);
-  // NOTE:
-  // [0,0] u,v coordinates of the texture is the bottom left corner [1,1] is the top right
 
   const buffer = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
@@ -64,27 +64,50 @@ const main = () => {
     0,
     0
   );
+  
+  // set the value of the uniform samplers in the fragment shader
+  const pixelTextureUnit = 0;
+  const kittenTextureUnit = 31; // webgl2 allows 32 texture units per shader
+  gl.uniform1i(gl.getUniformLocation(program, 'uPixelSampler'), pixelTextureUnit);
+  gl.uniform1i(gl.getUniformLocation(program, 'uKittenSampler'), kittenTextureUnit); 
 
-  const texture = gl.createTexture();
-  gl.bindTexture(gl.TEXTURE_2D, texture);
-
-  // This changes the alignment so that WebGL doesn't expect the rows to be aligned to 4 bytes.
-  // Instead, each row can now be aligned to 1 byte, allowing you to use gl.RGB with 3-byte pixels.
+  // setting up texture unit for pixels
+  const pixelTexture = gl.createTexture();
+  gl.activeTexture(gl.TEXTURE0 + pixelTextureUnit);
+  gl.bindTexture(gl.TEXTURE_2D, pixelTexture);
   gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
   gl.texImage2D(
     gl.TEXTURE_2D,
-    0,                // base image level (mipmap related)
-    gl.RGB,           // Internal format (RGB)
-    3,                // Width (3 pixels)
-    3,                // Height (3 pixels)
-    0,                // Border (must be 0)
-    gl.RGB,           // Format (RGB)
-    gl.UNSIGNED_BYTE, // Type (unsigned byte for pixel data)
-    pixels,           // The Uint8Array holding the pixel data
+    0,
+    gl.RGB,
+    3,
+    3,
+    0,
+    gl.RGB,
+    gl.UNSIGNED_BYTE,
+    pixels,
   );
-
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+  
+  // setting up texture unit for image
+  const image = await loadImage('kitten.png');
+  const kittenTexture = gl.createTexture();
+  gl.activeTexture(gl.TEXTURE0 + kittenTextureUnit);
+  gl.bindTexture(gl.TEXTURE_2D, kittenTexture);
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1);
+  gl.texImage2D(
+    gl.TEXTURE_2D,
+    0,
+    gl.RGBA,
+    900,
+    900,
+    0,
+    gl.RGBA,
+    gl.UNSIGNED_BYTE,
+    image,
+  );
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
 
   gl.drawArrays(gl.TRIANGLES, 0, 3);
 };

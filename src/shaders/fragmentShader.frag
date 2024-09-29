@@ -2,12 +2,12 @@
 
 in mediump vec2 vTexCoord;
 
-// NOTE: we are not setting this uniform value in JS code
-// it still gets a default value
-uniform sampler2D uSampler;
+
+uniform sampler2D uPixelSampler;
+uniform sampler2D uKittenSampler;
 
 out mediump vec4 fragColor;
 
 void main() {
-    fragColor = texture(uSampler, vTexCoord);
+    fragColor = texture(uPixelSampler, vTexCoord) * texture(uKittenSampler, vTexCoord);
 }
