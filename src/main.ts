@@ -17,60 +17,24 @@ const main = () => {
   }
 
   gl.useProgram(program!);
-
-  // const locPosition = gl.getAttribLocation(program, 'aPosition') 
-  // might be another way to get the location of the attributes
-  // in that case we don't specify the layout(location = x) in the vertex shader
-  
-  // but for now
-  // attribute locations specified here are the same as in the vertex shader
   const locPosition = 0;
-  const locPointSize = 1;
-  const locColor = 2;
-  
-  // also there is a way to set the attribute locations manually with
-  // gl.bindAttribLocation(program, locPosition, 'aPosition')
-  // BUT in that case binding needs to happen before the linking of the webGl program
-  
-  // enable the attributes
   gl.enableVertexAttribArray(locPosition);
-  gl.enableVertexAttribArray(locPointSize);
-  // comment out to get a fallback color
-  gl.enableVertexAttribArray(locColor);
-
-  // vertexAttrib calls could be good for a couple of reasons
-  // it is useful for debugging, try to comment out
-  // gl.enableVertexAttribArray(locColor);
-  // it is very helpful to test attributes in isolation
-  // by simply enable/disable them and setting a default value
-  
-  // note: locColor value is overwritten further down by vertexAttribPointer
-  // if the vertex attribute array is enabled
-  gl.vertexAttrib4f(locColor, 1.0, 0.0, 0.0, 1.0);
 
   // setting up the buffer data
-  const bufferData = new Float32Array([
-    0.0, 1.0,      100,   1, 0, 0,
-    -1.0, -1.0,     50,   0, 1, 0,
-    1.0, -1.0,       75,  0, 0, 1
-  ]);
-  const FLOAT_SIZE_IN_BYTE = 4;
-  const NUM_ELEMENTS_PER_VERTEX = 6;
-  // stride value must be given in bytes
-  // we use Float32Array so a single float is 4 bytes
-  const STRIDE = FLOAT_SIZE_IN_BYTE * NUM_ELEMENTS_PER_VERTEX;
+  const bufferData = new Float32Array([0.0, 1.0, -1.0, -1.0, 1.0, -1.0]);
 
   const buffer = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
   gl.bufferData(gl.ARRAY_BUFFER, bufferData, gl.STATIC_DRAW);
+  gl.vertexAttribPointer(
+    locPosition,
+    2,
+    gl.FLOAT,
+    false,
+    bufferData.BYTES_PER_ELEMENT * 2,
+    0
+  );
 
-  // vertexAttribPointer specifies which part of the bufferData is used for attribute
-  gl.vertexAttribPointer(locPosition, 2, gl.FLOAT, false, STRIDE, 0);
-  gl.vertexAttribPointer(locPointSize, 1, gl.FLOAT, false, STRIDE, 2 * FLOAT_SIZE_IN_BYTE);
-  gl.vertexAttribPointer(locColor, 3, gl.FLOAT, false, STRIDE, 3 * FLOAT_SIZE_IN_BYTE);
-
-  // we can experiment with the draw mode here
-  // gl.drawArrays(gl.POINTS, 0, 3);
   gl.drawArrays(gl.TRIANGLES, 0, 3);
 };
 
