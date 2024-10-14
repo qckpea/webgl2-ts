@@ -2,10 +2,13 @@
 
 layout(location = 0) in vec2 aPosition;
 layout(location = 1) in vec2 aTextCoord;
+layout(location = 2) in float aDepth;
 
 out mediump vec2 vTexCoord;
+out float vDepth;
 
 void main() {
     vTexCoord = aTextCoord;
+    vDepth = aDepth;
     gl_Position = vec4(aPosition, 0.0f, 1);
 }

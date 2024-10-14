@@ -2,11 +2,37 @@ import { createWebGlProgram } from "./program";
 import fragmentSource from "./shaders/fragmentShader.frag";
 import vertexSource from "./shaders/vertexShader.vert";
 
-const loadImage = (imageUrl: string): Promise<HTMLImageElement> => new Promise(resolve => {
-  const image = new Image();
-  image.addEventListener('load', () => resolve(image));
-  image.src = imageUrl;
-})
+const loadImage = (imageUrl: string): Promise<HTMLImageElement> =>
+  new Promise((resolve) => {
+    const image = new Image();
+    image.addEventListener("load", () => resolve(image));
+    image.src = imageUrl;
+  });
+
+const getImageData = (
+  image: HTMLImageElement
+): Uint8ClampedArray | undefined => {
+  const { width, height } = image;
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  ctx?.drawImage(image, 0, 0);
+  return ctx?.getImageData(0, 0, width, height).data;
+};
+
+const draw = (
+  gl: WebGL2RenderingContext,
+  program: WebGLProgram,
+  depthLocation: number,
+  now: number
+) => {
+  gl.vertexAttrib1f(depthLocation, now % 132);
+
+  gl.drawArrays(gl.TRIANGLES, 0, 6);
+  now = Date.now() / 100;
+  requestAnimationFrame(() => draw(gl, program, depthLocation, now));
+};
 
 const main = async () => {
   const canvas = document.querySelector("#canvas") as HTMLCanvasElement;
@@ -27,89 +53,76 @@ const main = async () => {
   gl.enableVertexAttribArray(locPosition);
   gl.enableVertexAttribArray(texPosition);
 
-  const bufferData = new Float32Array([0.0, 1.0, -1.0, -1.0, 1.0, -1.0]);
-  const texCoordBufferData = new Float32Array([0.5, 1, 0, 0, 1, 0]);
-  const pixels = new Uint8Array([
-    255, 0, 0,
-    0, 255, 0,
-    0, 0, 255,
-    128, 128, 0,
-    255, 255, 0,
-    255, 128, 0,
-    0, 255, 255,
-    255, 0, 255,
-    0, 0, 0 
+  const vertexBufferData = new Float32Array([
+    -1.0, 1.0, -1.0, -1.0, 1.0, -1.0, 1.0, -1.0, 1.0, 1.0, -1.0, 1.0,
+  ]);
+  const texCoordBufferData = new Float32Array([
+    0.0, 1, 0, 0, 1, 0, 1, 0, 1, 1, 0, 1,
   ]);
 
-  const buffer = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-  gl.bufferData(gl.ARRAY_BUFFER, bufferData, gl.STATIC_DRAW);
-  gl.vertexAttribPointer(
-    locPosition,
-    2,
-    gl.FLOAT,
-    false,
-    0,
-    0
-  );
+  const vertexBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, vertexBufferData, gl.STATIC_DRAW);
+  gl.vertexAttribPointer(locPosition, 2, gl.FLOAT, false, 0, 0);
 
   const texCoordBuffer = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
   gl.bufferData(gl.ARRAY_BUFFER, texCoordBufferData, gl.STATIC_DRAW);
-  gl.vertexAttribPointer(
-    texPosition,
-    2,
-    gl.FLOAT,
-    false,
-    0,
-    0
-  );
-  
-  // set the value of the uniform samplers in the fragment shader
-  const pixelTextureUnit = 0;
-  const kittenTextureUnit = 31; // webgl2 allows 32 texture units per shader
-  gl.uniform1i(gl.getUniformLocation(program, 'uPixelSampler'), pixelTextureUnit);
-  gl.uniform1i(gl.getUniformLocation(program, 'uKittenSampler'), kittenTextureUnit); 
+  gl.vertexAttribPointer(texPosition, 2, gl.FLOAT, false, 0, 0);
 
-  // setting up texture unit for pixels
-  const pixelTexture = gl.createTexture();
-  gl.activeTexture(gl.TEXTURE0 + pixelTextureUnit);
-  gl.bindTexture(gl.TEXTURE_2D, pixelTexture);
-  gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
-  gl.texImage2D(
-    gl.TEXTURE_2D,
-    0,
-    gl.RGB,
-    3,
-    3,
-    0,
-    gl.RGB,
-    gl.UNSIGNED_BYTE,
-    pixels,
-  );
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-  
-  // setting up texture unit for image
-  const image = await loadImage('kitten.png');
-  const kittenTexture = gl.createTexture();
-  gl.activeTexture(gl.TEXTURE0 + kittenTextureUnit);
-  gl.bindTexture(gl.TEXTURE_2D, kittenTexture);
-  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1);
-  gl.texImage2D(
-    gl.TEXTURE_2D,
-    0,
-    gl.RGBA,
-    900,
-    900,
-    0,
-    gl.RGBA,
-    gl.UNSIGNED_BYTE,
-    image,
-  );
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+  const image = await loadImage("tilemap_packed.png");
+  const imageData = getImageData(image);
 
-  gl.drawArrays(gl.TRIANGLES, 0, 3);
+  const pbo = gl.createBuffer();
+  gl.bindBuffer(gl.PIXEL_UNPACK_BUFFER, pbo);
+  gl.bufferData(gl.PIXEL_UNPACK_BUFFER, imageData!, gl.STATIC_DRAW);
+  gl.pixelStorei(gl.UNPACK_ROW_LENGTH, image.width);
+  gl.pixelStorei(gl.UNPACK_IMAGE_HEIGHT, image.height);
+
+  const texture = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D_ARRAY, texture);
+
+  gl.texStorage3D(gl.TEXTURE_2D_ARRAY, 1, gl.RGBA8, 16, 16, 132);
+  gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+
+  let now = Date.now();
+  for (let i = 0; i < 132; i++) {
+    const row = Math.floor(i / 12) * 16;
+    const col = (i % 11) * 16;
+    gl.pixelStorei(gl.UNPACK_SKIP_PIXELS, col);
+    gl.pixelStorei(gl.UNPACK_SKIP_ROWS, row);
+    gl.texSubImage3D(
+      gl.TEXTURE_2D_ARRAY,
+      0,
+      0,
+      0,
+      i,
+      16,
+      16,
+      1, // depth
+      gl.RGBA,
+      gl.UNSIGNED_BYTE,
+      0
+    );
+  }
+  // texSubImage3D can be called by passing the texture atlas every call but it creates overhead
+  // by uploading texture image every time we create a sub texture from it
+  // to avoid that we upload the texture atlas once by using canvas context 2d
+  // then we get the image data as Uint8ClampedArray
+  // and we can use that data in a pixel buffer object
+  // and set the row and col dimensions by using
+  // gl.pixelStorei(gl.UNPACK_ROW_LENGTH, image.width);
+  // gl.pixelStorei(gl.UNPACK_IMAGE_HEIGHT, image.height);
+
+  // takes very little time to upload the texture atlas and creating 3D textures array from it
+  // using gl.texStorage3D
+  // this case creating 132 layer of 16x16 textures under 1-2ms (depending on your system ofc.)
+  console.log(`${Date.now() - now} ms`);
+
+  const depthLocation = gl.getAttribLocation(program, "aDepth");
+  // animating through the textureArray
+  draw(gl, program, depthLocation, now);
 };
 
 main();
