@@ -18,60 +18,52 @@ const main = () => {
 
   gl.useProgram(program!);
 
-  // const locPosition = gl.getAttribLocation(program, 'aPosition') 
-  // might be another way to get the location of the attributes
-  // in that case we don't specify the layout(location = x) in the vertex shader
-  
-  // but for now
-  // attribute locations specified here are the same as in the vertex shader
-  const locPosition = 0;
-  const locPointSize = 1;
-  const locColor = 2;
-  
-  // also there is a way to set the attribute locations manually with
-  // gl.bindAttribLocation(program, locPosition, 'aPosition')
-  // BUT in that case binding needs to happen before the linking of the webGl program
-  
-  // enable the attributes
-  gl.enableVertexAttribArray(locPosition);
-  gl.enableVertexAttribArray(locPointSize);
-  // comment out to get a fallback color
-  gl.enableVertexAttribArray(locColor);
+  const vertices = new Float32Array([
+    // Triangle RED
+    //x  y      depth   r    g    b    a
+    0.0, 0.5,   0.5,    1.0, 0.0, 0.0, 1.0, 
+    -.5, -.5,   0.5,    1.0, 0.0, 0.0, 1.0,
+    0.5, -.5,   0.5,    1.0, 0.0, 0.0, 1.0,
 
-  // vertexAttrib calls could be good for a couple of reasons
-  // it is useful for debugging, try to comment out
-  // gl.enableVertexAttribArray(locColor);
-  // it is very helpful to test attributes in isolation
-  // by simply enable/disable them and setting a default value
-  
-  // note: locColor value is overwritten further down by vertexAttribPointer
-  // if the vertex attribute array is enabled
-  gl.vertexAttrib4f(locColor, 1.0, 0.0, 0.0, 1.0);
+    // Triangle GREEN
+    //x  y      depth   r    g    b    a
+    -.3, 0.3,   0.0,    0.0, 1.0, 0.0, 1.0, 
+    -.3, -.3,   0.0,    0.0, 1.0, 0.0, 1.0,
+    0.3, -.3,   0.0,    0.0, 1.0, 0.0, 1.0,
 
-  // setting up the buffer data
-  const bufferData = new Float32Array([
-    0.0, 1.0,      100,   1, 0, 0,
-    -1.0, -1.0,     50,   0, 1, 0,
-    1.0, -1.0,       75,  0, 0, 1
+    // Triangle BLUE
+    //x  y      depth   r    g    b    a
+    0.0, 0.4,   -.5,    0.0, 0.0, 1.0, 1.0, 
+    -.4, 0.1,   -.5,    0.0, 0.0, 1.0, 1.0,
+    0.4, 0.1,   -.5,    0.0, 0.0, 1.0, 1.0,
   ]);
-  const FLOAT_SIZE_IN_BYTE = 4;
-  const NUM_ELEMENTS_PER_VERTEX = 6;
-  // stride value must be given in bytes
-  // we use Float32Array so a single float is 4 bytes
-  const STRIDE = FLOAT_SIZE_IN_BYTE * NUM_ELEMENTS_PER_VERTEX;
 
+  // Create and bind buffer
   const buffer = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-  gl.bufferData(gl.ARRAY_BUFFER, bufferData, gl.STATIC_DRAW);
+  gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
 
-  // vertexAttribPointer specifies which part of the bufferData is used for attribute
-  gl.vertexAttribPointer(locPosition, 2, gl.FLOAT, false, STRIDE, 0);
-  gl.vertexAttribPointer(locPointSize, 1, gl.FLOAT, false, STRIDE, 2 * FLOAT_SIZE_IN_BYTE);
-  gl.vertexAttribPointer(locColor, 3, gl.FLOAT, false, STRIDE, 3 * FLOAT_SIZE_IN_BYTE);
+  const stride = 7 * Float32Array.BYTES_PER_ELEMENT;
+  const positionLocation = gl.getAttribLocation(program, "aPosition");
+  const colorLocation = gl.getAttribLocation(program, "aColor");
 
-  // we can experiment with the draw mode here
-  // gl.drawArrays(gl.POINTS, 0, 3);
-  gl.drawArrays(gl.TRIANGLES, 0, 3);
+  gl.vertexAttribPointer(positionLocation, 3, gl.FLOAT, false, stride, 0);
+  gl.enableVertexAttribArray(positionLocation);
+  gl.vertexAttribPointer(
+    colorLocation,
+    4,
+    gl.FLOAT,
+    false,
+    stride,
+    3 * Float32Array.BYTES_PER_ELEMENT
+  );
+  gl.enableVertexAttribArray(colorLocation);
+
+  // NOTE: without depth test the drawing order matters (depth 'z' value is meaningless)
+  gl.enable(gl.DEPTH_TEST)
+  gl.drawArrays(gl.TRIANGLES, 3, 6); // GREEN
+  gl.drawArrays(gl.TRIANGLES, 6, 9); // BLUE
+  gl.drawArrays(gl.TRIANGLES, 0, 3); // RED
 };
 
 main();
